@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import Sidebar from "@/components/admin/Sidebar";
 
 export default function AdminLayout({
@@ -11,8 +11,15 @@ export default function AdminLayout({
 }) {
   const [authorized, setAuthorized] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
+    // If we are on the login page, don't try to authorize or redirect
+    if (pathname === "/admin/login") {
+      setAuthorized(true);
+      return;
+    }
+
     // Basic local storage check for 'admin/admin' auth
     const isAdmin = localStorage.getItem("is_admin") === "true";
     if (!isAdmin) {
@@ -20,7 +27,7 @@ export default function AdminLayout({
     } else {
       setAuthorized(true);
     }
-  }, [router]);
+  }, [router, pathname]);
 
   if (!authorized) {
     return (
@@ -28,6 +35,11 @@ export default function AdminLayout({
         <div className="animate-spin h-8 w-8 border-4 border-[#C8102E] border-t-transparent rounded-full"></div>
       </div>
     );
+  }
+
+  // If we are on the login page, don't show the Sidebar
+  if (pathname === "/admin/login") {
+    return <>{children}</>;
   }
 
   return (
