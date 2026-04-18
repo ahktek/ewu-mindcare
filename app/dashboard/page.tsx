@@ -1,133 +1,127 @@
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
-import { supabase } from "@/lib/supabase";
-
-type Appointment = {
-  id: number;
-  name: string;
-  email: string;
-  role: string;
-  appointment_date: string;
-  appointment_time: string;
-  notes: string | null;
-  status: string;
-  created_at: string;
-};
+import { prisma } from "@/lib/prisma";
 
 export default async function DashboardPage() {
-  const { data: appointmentsData, error } = await supabase
-    .from("appointments")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(3);
+  // In a real app, we would get the current user session and email
+  // const user = await getSession();
+  // const appointments = await prisma.appointment.findMany({ where: { email: user.email } });
+  
+  const appointments = await prisma.appointment.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 5
+  });
 
-  const appointments: Appointment[] = appointmentsData ?? [];
+  const stats = [
+    { name: "Appointments", value: appointments.length, icon: "📅" },
+    { name: "Resources Read", value: 12, icon: "📚" },
+    { name: "Support Tokens", value: 2, icon: "🔑" },
+  ];
 
   return (
-    <main className="min-h-screen bg-[#F8FBFF]">
+    <main className="min-h-screen bg-[#FDFDFD] text-[#1F2937]">
       <Navbar />
 
-      <div className="px-6 py-10">
-        <div className="max-w-6xl mx-auto">
-          <div className="bg-white rounded-3xl shadow-lg p-8 mb-8">
-            <h1 className="text-3xl font-bold text-[#C8102E]">
-              Welcome to Your Dashboard
-            </h1>
-            <p className="text-gray-600 mt-2">
-              Manage your support activities, appointments, and wellness journey.
-            </p>
+      <div className="max-w-7xl mx-auto px-6 py-12">
+        <header className="mb-12">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div>
+              <h1 className="text-4xl font-black tracking-tight">
+                Welcome Back, <span className="text-[#C8102E]">Student</span>
+              </h1>
+              <p className="text-gray-500 mt-2 text-lg">
+                Your mental wellness is our priority. Here's your current progress.
+              </p>
+            </div>
+            <Link 
+              href="/book"
+              className="px-8 py-4 bg-[#C8102E] text-white rounded-2xl font-bold shadow-xl shadow-red-100 hover:shadow-red-200 hover:-translate-y-1 transition-all text-center"
+            >
+              + New Appointment
+            </Link>
+          </div>
+        </header>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          {stats.map((stat) => (
+            <div key={stat.name} className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+              <div className="text-3xl mb-4">{stat.icon}</div>
+              <p className="text-gray-500 font-medium text-sm uppercase tracking-wider">{stat.name}</p>
+              <p className="text-4xl font-black mt-1">{stat.value}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Main Content: Appointments */}
+          <div className="lg:col-span-2 space-y-8">
+            <section className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden">
+              <div className="p-8 border-b border-gray-50 flex justify-between items-center">
+                <h2 className="text-2xl font-bold">Your Appointments</h2>
+                <Link href="/book" className="text-[#C8102E] font-bold text-sm hover:underline">View History</Link>
+              </div>
+              
+              <div className="p-4">
+                {appointments.length > 0 ? (
+                  <div className="space-y-4">
+                    {appointments.map((app) => (
+                      <div key={app.id} className="flex items-center justify-between p-6 rounded-[24px] bg-[#F8FBFF] border border-blue-50/50">
+                        <div className="flex items-center gap-5">
+                          <div className="h-14 w-14 rounded-2xl bg-white shadow-sm flex flex-col items-center justify-center border border-gray-100">
+                            <span className="text-[#C8102E] font-black text-lg">
+                              {new Date(app.appointmentDate).getDate()}
+                            </span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase">
+                              {new Date(app.appointmentDate).toLocaleString('default', { month: 'short' })}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="font-bold text-lg text-[#1F2937]">Counseling Session</p>
+                            <p className="text-gray-500 text-sm font-medium">{app.appointmentTime} • Regular Checkup</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest ${
+                            app.status === 'pending' ? 'bg-yellow-50 text-yellow-600' : 
+                            app.status === 'approved' ? 'bg-green-50 text-green-600' : 
+                            'bg-gray-100 text-gray-500'
+                          }`}>
+                            {app.status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-12 text-center text-gray-400 italic">
+                    No active appointments. Use the button above to book one.
+                  </div>
+                )}
+              </div>
+            </section>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="bg-white rounded-3xl shadow-md p-6">
-              <h2 className="text-xl font-bold text-[#C8102E] mb-3">
-                Book Appointment
-              </h2>
-              <p className="text-gray-600 mb-4">
-                Request a counseling session with a university counselor.
+          {/* Sidebar: Quick Actions & Tips */}
+          <div className="space-y-6">
+            <section className="bg-gradient-to-br from-[#C8102E] to-[#8E0B20] p-8 rounded-[32px] text-white shadow-xl shadow-red-100">
+              <h3 className="text-xl font-bold mb-3">Anonymous Support</h3>
+              <p className="text-red-100 text-sm leading-relaxed mb-6">
+                Need to share something privately? Our anonymous support system is here 24/7.
               </p>
-              <Link
-                href="/book"
-                className="inline-block px-4 py-2 rounded-xl bg-[#C8102E] text-white"
-              >
-                Go to Booking
+              <Link href="/support" className="block w-full text-center py-3 bg-white/10 hover:bg-white/20 rounded-xl font-bold transition-all border border-white/20">
+                Submit Concern
               </Link>
-            </div>
+            </section>
 
-            <div className="bg-white rounded-3xl shadow-md p-6">
-              <h2 className="text-xl font-bold text-[#C8102E] mb-3">
-                AI Support Chat
-              </h2>
-              <p className="text-gray-600 mb-4">
-                Get supportive guidance and initial emotional support.
-              </p>
-              <Link
-                href="/chat"
-                className="inline-block px-4 py-2 rounded-xl bg-[#C8102E] text-white"
-              >
-                Open Chat
-              </Link>
-            </div>
-
-            <div className="bg-white rounded-3xl shadow-md p-6">
-              <h2 className="text-xl font-bold text-[#C8102E] mb-3">
-                Wellness Resources
-              </h2>
-              <p className="text-gray-600 mb-4">
-                Explore helpful mental health and stress management content.
-              </p>
-              <Link
-                href="/resources"
-                className="inline-block px-4 py-2 rounded-xl bg-[#C8102E] text-white"
-              >
-                View Resources
-              </Link>
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6 mt-8">
-            <div className="bg-white rounded-3xl shadow-md p-6">
-              <h3 className="text-xl font-bold text-[#C8102E] mb-3">
-                Recent Appointment Requests
-              </h3>
-
-              {error ? (
-                <p className="text-red-600">
-                  Failed to load appointment data.
-                </p>
-              ) : appointments.length > 0 ? (
-                <div className="space-y-3">
-                  {appointments.map((item: Appointment) => (
-                    <div
-                      key={item.id}
-                      className="rounded-2xl border bg-[#F8FBFF] p-4"
-                    >
-                      <p className="font-semibold">{item.name}</p>
-                      <p className="text-sm text-gray-600">
-                        {item.appointment_date} at {item.appointment_time}
-                      </p>
-                      <p className="text-sm text-[#C8102E] mt-1">
-                        Status: {item.status}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-600">
-                  No appointment requests yet. Please submit a booking request.
-                </p>
-              )}
-            </div>
-
-            <div className="bg-white rounded-3xl shadow-md p-6">
-              <h3 className="text-xl font-bold text-[#C8102E] mb-3">
-                Personal Wellness Note
-              </h3>
-              <p className="text-gray-600">
-                Take one step at a time. Rest, connection, and support are part
-                of progress.
-              </p>
-            </div>
+            <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
+              <h3 className="text-xl font-bold mb-4">Wellness Tip</h3>
+              <div className="p-4 rounded-2xl bg-green-50 border border-green-100 text-green-800 text-sm italic">
+                "Taking a 5-minute break every hour can significantly reduce academic burnout. Remember to breathe."
+              </div>
+              <button className="mt-6 text-sm font-bold text-gray-400 hover:text-[#C8102E] transition-colors flex items-center gap-2">
+                Show another tip →
+              </button>
+            </section>
           </div>
         </div>
       </div>
